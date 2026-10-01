@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RDCM Transportes e Guincho</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+:root{--bg:#f3f2ee;--card:#fff;--ink:#1d2127;--mut:#6b7078;--line:#dcdad2;--y:#f5c400;--yi:#1d2127;--ok:#1f7a4d;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16191d;--card:#20242a;--ink:#eceae3;--mut:#9aa0a8;--line:#333a42;--ok:#4cc38a;--bad:#ff8a80}}
+:root[data-theme="dark"]{--bg:#16191d;--card:#20242a;--ink:#eceae3;--mut:#9aa0a8;--line:#333a42;--ok:#4cc38a;--bad:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 Barlow,system-ui,sans-serif}
+header{background:#1d2127;color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:4px solid var(--y)}
+header h1{font:700 22px 'Barlow Condensed',sans-serif;margin:0;letter-spacing:.5px;flex:1;min-width:150px}
+header small{display:block;font:400 12px Barlow;color:#b9bec5}
+select,input,button{font:inherit;color:var(--ink)}
+header select{background:#2b3038;color:#fff;border:1px solid #444b55;border-radius:6px;padding:6px}
+nav{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+nav button{border:0;background:none;padding:8px 14px;border-radius:6px;font-weight:600;white-space:nowrap;cursor:pointer;color:var(--mut)}
+nav button.on{background:var(--y);color:var(--yi)}
+main{max-width:1000px;margin:0 auto;padding:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}
+.k span{color:var(--mut);font-size:13px}.k b{display:block;font:700 24px 'Barlow Condensed';margin-top:2px}
+.k.big{background:#1d2127;color:#fff;border-color:#1d2127;border-left:6px solid var(--y)}.k.big span{color:#b9bec5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px}
+h2{font:700 18px 'Barlow Condensed';margin:0 0 8px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end}
+label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:2px}
+input,select.f{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
+.btn{background:var(--y);color:var(--yi);border:0;border-radius:6px;padding:9px 14px;font-weight:600;cursor:pointer}
+.btn.s{padding:4px 8px;font-size:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:560px}
+th{text-align:left;font-size:12px;color:var(--mut);font-weight:500;padding:6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}.r{text-align:right;font-variant-numeric:tabular-nums}
+.tag{font-size:12px;padding:2px 7px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.tag.ok{color:var(--ok);border-color:var(--ok)}.tag.no{color:var(--bad);border-color:var(--bad)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.bar select,.bar input{width:auto}
+.note{color:var(--mut);font-size:13px}
+</style></head><body>
+<header><h1>RDCM Transportes e Guincho<small>Controle de fretes, cobrança e equipe</small></h1>
+<span id="sync" class="note" style="color:#b9bec5">Conectando…</span><select id="who" aria-label="Quem está usando"></select></header>
+<nav id="nav"></nav><main id="app"></main>
+<script>
+const $=s=>document.querySelector(s),R=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KEY='rdcm_v1';
+const seed=()=>({cfg:{dono:'Rafael',pctMot:10},
+equipe:['Rafael','Raphael','Gabriel','João','Ronaldo'],
+veic:['9160','3/4 RD','Cargo RS','Exp. RD','1721 Sob','HR RD'],
+fretes:[
+['2026-08-01','Coop. MGM','Estiva Gerbi','9160',330,'Rafael'],['2026-08-03','Coop. MGM','Itapira','9160',910,'Rafael'],['2026-08-18','Itapira Coop.','Itapira','3/4 RD',590,'João'],
+['2026-08-27','Terra Verde','Descalvado/MG','Cargo RS',1780,'Rafael'],['2026-09-01','Coop. Itapira','','9160',599.4,'Rafael'],['2026-09-09','Terra Verde','Rod. Rental','1721 Sob',2600,'Raphael'],['2026-09-10','Coop. MGM','S.A. Pinhal','9160',1950,'João'],['2026-09-28','Coop. MGM','Itapira','9160',642.6,'Gabriel']
+].map((r,i)=>({id:i+1,data:r[0],cliente:r[1],local:r[2],veiculo:r[3],valor:r[4],motorista:r[5],pago:i<4,nf:'',venc:''})),
+gastos:[{id:1,data:'2026-08-04',desc:'Diesel posto',cat:'Diesel',quem:'Rafael',valor:684},{id:2,data:'2026-08-19',desc:'Troca de óleo',cat:'Manutenção',quem:'Rafael',valor:563},{id:3,data:'2026-09-10',desc:'Diesel posto',cat:'Diesel',quem:'João',valor:450}]});
+function norm(x){x.cfg.pctDono=x.cfg.pctDono??50;x.pagtos=x.pagtos||[];x.clientes=x.clientes||[...new Set(x.fretes.map(f=>f.cliente))].map((n,i)=>({id:i+1,nome:n,codigo:n=='Terra Verde'?'10':''}));return x}
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}S=norm(S||seed());
+let dbDoc=null;const sync=t=>{const e=$('#sync');if(e)e.textContent=t};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(dbDoc)dbDoc.set({json:JSON.stringify(S)}).catch(()=>sync('Erro ao sincronizar'))};
+(async()=>{try{const db=window.claude&&await claude.use('db');if(!db){sync('Só neste aparelho');return}dbDoc=db.doc('app/rdcm');const sn=await dbDoc.get();if(sn.exists)S=norm(JSON.parse(sn.data().json));else await dbDoc.set({json:JSON.stringify(S)});dbDoc.onSnapshot(x=>{if(x.exists&&!x.metadata.hasPendingWrites){try{S=norm(JSON.parse(x.data().json));draw()}catch(e){}}});sync('Sincronizado');draw()}catch(e){sync('Só neste aparelho')}})();
+let tab='painel',me=S.cfg.dono,mes='',fCli='',fMot='';
+const nid=a=>Math.max(0,...a.map(x=>x.id))+1;
+const isDono=()=>me===S.cfg.dono;
+const meses=()=>[...new Set([...S.fretes,...S.gastos].map(x=>x.data.slice(0,7)))].sort().reverse();
+const MN=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const mLabel=m=>m?MN[+m.slice(5)-1]+'/'+m.slice(2,4):'Tudo';
+const inM=x=>!mes||x.data.startsWith(mes);
+const fr=()=>S.fretes.filter(f=>inM(f)&&(isDono()||f.motorista===me)&&(!fCli||f.cliente===fCli)&&(!fMot||f.motorista===fMot)).sort((a,b)=>b.data.localeCompare(a.data));
+const parteDono=v=>v*(100-S.cfg.pctMot)/100*S.cfg.pctDono/100,com=v=>v*S.cfg.pctMot/100, metade=v=>v*(100-S.cfg.pctMot)/200;
+const fd=d=>d.split('-').reverse().slice(0,2).join('/');
+const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+const tabs=()=>isDono()?[['painel','Visão geral'],['fretes','Fretes'],['cobranca','Cobrança'],['equipe','Equipe'],['gastos','Gastos'],['cadastros','Cadastros']]:[['fretes','Meus fretes'],['equipe','Meus ganhos']];
+function mesBar(extra=''){return `<div class="bar"><select onchange="mes=this.value;draw()">${['',...meses()].map(m=>`<option value="${m}" ${m==mes?'selected':''}>${mLabel(m)}</option>`).join('')}</select>${extra}</div>`}
+function painel(){const F=fr(),G=S.gastos.filter(inM),tot=sum(F,f=>f.valor),rec=sum(F.filter(f=>f.pago),f=>f.valor),aberto=tot-rec,cm=sum(F,f=>com(f.valor)),gs=sum(G,g=>g.valor),liq=tot-cm-gs;
+const porCli={};F.forEach(f=>porCli[f.cliente]=(porCli[f.cliente]||0)+f.valor);
+return mesBar()+`<div class="grid"><div class="k big"><span>Sobra do período (frete − motoristas − gastos)</span><b>${R(liq)}</b></div><div class="k"><span>Frete total</span><b>${R(tot)}</b></div><div class="k"><span>Já recebido</span><b style="color:var(--ok)">${R(rec)}</b></div><div class="k"><span>A receber</span><b style="color:var(--bad)">${R(aberto)}</b></div><div class="k"><span>Motoristas (${S.cfg.pctMot}%)</span><b>${R(cm)}</b></div><div class="k"><span>Gastos</span><b>${R(gs)}</b></div></div><div class="card"><h2>Divisão do frete</h2><div class="grid" style="margin:0"><div class="k"><span>Motoristas ${S.cfg.pctMot}%</span><b>${R(cm)}</b></div><div class="k"><span>${S.cfg.dono} (dono) ${(100-S.cfg.pctMot)*S.cfg.pctDono/100}%</span><b>${R(parteDono(tot))}</b></div><div class="k"><span>Outra parte ${(100-S.cfg.pctMot)*(100-S.cfg.pctDono)/100}%</span><b>${R(tot-cm-parteDono(tot))}</b></div></div></div>
+<div class="card"><h2>Frete por cliente</h2><div class="tw"><table><tr><th>Cliente<th class="r">Fretes<th class="r">Valor</tr>${Object.entries(porCli).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<tr><td>${esc(c)}<td class="r">${F.filter(f=>f.cliente==c).length}<td class="r">${R(v)}`).join('')}</table></div></div>
+<p class="note">Cálculo igual ao caderno: frete − comissão de motorista − gastos. Falta ainda incluir NF/impostos como desconto (próxima versão).</p>`}
+function fretes(){const F=fr(),cl=[...new Set([...S.clientes.map(c=>c.nome),...S.fretes.map(f=>f.cliente)])].sort();
+const form=`<div class="card"><h2>Lançar frete</h2><form onsubmit="addF(event)"><label>Data<input name="data" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><label>Cliente<input name="cliente" list="dl-c" required></label><label>Local / destino<input name="local"></label><label>Veículo<select class="f" name="veiculo">${S.veic.map(v=>`<option>${esc(v)}`).join('')}</select></label><label>Motorista<select class="f" name="motorista">${S.equipe.map(v=>`<option ${v==me?'selected':''}>${esc(v)}`).join('')}</select></label><label>Valor (R$)<input name="valor" type="number" step="0.01" required inputmode="decimal"></label><button class="btn">Salvar frete</button></form><datalist id="dl-c">${cl.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>`;
+const fil=mesBar(isDono()?`<select onchange="fCli=this.value;draw()"><option value="">Todos clientes</option>${cl.map(c=>`<option ${c==fCli?'selected':''}>${esc(c)}</option>`).join('')}</select><select onchange="fMot=this.value;draw()"><option value="">Todos motoristas</option>${S.equipe.map(c=>`<option ${c==fMot?'selected':''}>${esc(c)}</option>`).join('')}</select>`:'');
+return form+fil+`<div class="card"><h2>${F.length} fretes · ${R(sum(F,f=>f.valor))}</h2><div class="tw"><table><tr><th>Data<th>Cliente / local<th>Veículo<th>Motorista<th class="r">Valor<th class="r">${S.cfg.pctMot}%<th>Status<th></tr>${F.map(f=>`<tr><td>${fd(f.data)}<td>${esc(f.cliente)}<br><span class="note">${esc(f.local)}</span><td>${esc(f.veiculo)}<td>${esc(f.motorista)}<td class="r">${R(f.valor)}<td class="r">${R(com(f.valor))}<td><span class="tag ${f.pago?'ok':'no'}">${f.pago?'Recebido':'A receber'}</span><td>${isDono()?`<button class="btn s" onclick="delF(${f.id})">Excluir</button>`:''}`).join('')||'<tr><td colspan=8 class="note">Nenhum frete neste filtro.'}</table></div></div>`}
+let showPago=false,sel={};
+function cobranca(){const F=S.fretes.filter(f=>inM(f)&&(showPago||!f.pago)),cl=[...new Set(F.map(f=>f.cliente))].sort();
+const top=mesBar(`<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" style="width:auto" ${showPago?'checked':''} onchange="showPago=this.checked;draw()">Mostrar já recebidos</label>`)+`<div class="k big" style="margin-bottom:14px"><span>Total a receber (${cl.length} clientes)</span><b>${R(sum(F.filter(f=>!f.pago),f=>f.valor))}</b></div>`;
+return top+cl.map(c=>{const L=F.filter(f=>f.cliente==c).sort((a,b)=>a.data.localeCompare(b.data)),ab=L.filter(f=>!f.pago),code=(S.clientes.find(x=>x.nome==c)||{}).codigo,ns=ab.filter(f=>sel[f.id]).length,ci=S.clientes.findIndex(x=>x.nome==c);
+return `<div class="card"><h2>${esc(c)}${code?` <span class="tag">ID ${esc(code)}</span>`:''} — a receber ${R(sum(ab,f=>f.valor))} <span class="note">(${ab.length} de ${L.length} fretes)</span></h2><div class="bar"><button class="btn s" onclick="recv(${ci>=0?ci:-1},${JSON.stringify(c).replace(/"/g,'&quot;')},false)" ${ns?'':'disabled'}>Receber selecionados (${ns})</button><button class="btn" onclick="recv(0,${JSON.stringify(c).replace(/"/g,'&quot;')},true)" ${ab.length?'':'disabled'}>Receber tudo ${R(sum(ab,f=>f.valor))}</button></div><div class="tw"><table><tr><th><th>Data<th>Local<th>Veículo<th>NF<th>Vence<th class="r">Valor<th></tr>${L.map(f=>`<tr><td>${f.pago?'':`<input type="checkbox" style="width:auto" ${sel[f.id]?'checked':''} onchange="sel[${f.id}]=this.checked;draw()">`}<td>${fd(f.data)}<td>${esc(f.local)||'—'}<td>${esc(f.veiculo)}<td><button class="btn s" onclick="nf(${f.id})">${esc(f.nf)||'+ NF'}</button><td>${f.venc?fd(f.venc)+'/'+f.venc.slice(2,4):'—'}<td class="r">${R(f.valor)}<td>${f.pago?'<span class="tag ok">Recebido</span> ':''}<button class="btn s" onclick="pg(${f.id})">${f.pago?'Desfazer':'Recebi'}</button>`).join('')}</table></div></div>`}).join('')||'<p class="note">Nada a receber neste período.</p>'}
+function recv(_,c,all){S.fretes.filter(f=>f.cliente==c&&!f.pago&&inM(f)&&(all||sel[f.id])).forEach(f=>{f.pago=true;f.recebidoEm=new Date().toISOString().slice(0,10);delete sel[f.id]});save();draw()}
+let eq='';
+function equipe(){const nomes=isDono()?S.equipe:[me];if(!isDono())eq=me;else if(!nomes.includes(eq))eq=nomes[0];const F=fr(),P=S.pagtos.filter(p=>inM(p));
+const lin=n=>{const L=F.filter(f=>f.motorista==n),v=sum(L,f=>f.valor),c=com(v),pg=sum(P.filter(p=>p.mot==n),p=>p.valor);return{n,L,v,c,pg,saldo:c-pg}};
+const all=nomes.map(lin),d=lin(eq);let ac=0;
+const resumo=isDono()?`<div class="card"><h2>Resumo da equipe</h2><div class="tw"><table><tr><th>Colaborador<th class="r">Fretes<th class="r">Frete total<th class="r">Comissão ${S.cfg.pctMot}%<th class="r">Já pago<th class="r">Saldo a pagar</tr>${all.map(x=>`<tr style="cursor:pointer" onclick="eq=${JSON.stringify(x.n).replace(/"/g,'&quot;')};draw()"><td><b>${esc(x.n)}</b><td class="r">${x.L.length}<td class="r">${R(x.v)}<td class="r">${R(x.c)}<td class="r">${R(x.pg)}<td class="r"><b>${R(x.saldo)}</b>`).join('')}</table></div><p class="note">Toque num colaborador para ver o detalhe.</p></div>`:'';
+const det=`<div class="card"><h2>Detalhe — ${esc(eq)}</h2><div class="grid"><div class="k"><span>Fretes feitos</span><b>${d.L.length}</b></div><div class="k"><span>Frete total</span><b>${R(d.v)}</b></div><div class="k"><span>Comissão acumulada</span><b>${R(d.c)}</b></div><div class="k"><span>Já pago</span><b>${R(d.pg)}</b></div><div class="k big"><span>Saldo a pagar</span><b>${R(d.saldo)}</b></div></div><div class="tw"><table><tr><th>Data<th>Cliente / local<th>Veículo<th class="r">Frete<th class="r">Comissão<th class="r">Acumulado</tr>${[...d.L].sort((a,b)=>a.data.localeCompare(b.data)).map(f=>{ac+=com(f.valor);return `<tr><td>${fd(f.data)}<td>${esc(f.cliente)}<br><span class="note">${esc(f.local)}</span><td>${esc(f.veiculo)}<td class="r">${R(f.valor)}<td class="r">${R(com(f.valor))}<td class="r"><b>${R(ac)}</b>`}).join('')||'<tr><td colspan=6 class="note">Sem fretes no período.'}</table></div></div>`;
+const pagos=`<div class="card"><h2>Pagamentos feitos a ${esc(eq)}</h2>${isDono()?`<form onsubmit="addP(event)"><label>Data<input name="data" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><label>Valor (R$)<input name="valor" type="number" step="0.01" required inputmode="decimal"></label><label>Obs.<input name="obs"></label><button class="btn">Registrar pagamento</button></form>`:''}<div class="tw"><table>${P.filter(p=>p.mot==eq).map(p=>`<tr><td>${fd(p.data)}<td>${esc(p.obs)}<td class="r">${R(p.valor)}<td>${isDono()?`<button class="btn s" onclick="delP(${p.id})">Excluir</button>`:''}`).join('')||'<tr><td class="note">Nenhum pagamento no período.'}</table></div></div>`;
+return mesBar()+resumo+det+pagos}
+function addP(e){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));S.pagtos.push({id:nid(S.pagtos),mot:eq,...d,valor:+d.valor});save();draw()}
+const delP=id=>{S.pagtos=S.pagtos.filter(p=>p.id!=id);save();draw()};
+function cadastros(){const l=(k,tit,ph,extra='')=>`<div class="card"><h2>${tit}</h2><form onsubmit="addCad(event,'${k}')"><label>Nome<input name="nome" required placeholder="${ph}"></label>${extra}<button class="btn">Cadastrar</button></form><div class="tw"><table>${S[k].map((x,i)=>{const o=typeof x=='string'?{nome:x}:x;return `<tr><td>${esc(o.nome)}${o.codigo?` <span class="tag">ID ${esc(o.codigo)}</span>`:''}<td class="r"><button class="btn s" onclick="delCad('${k}',${i})">Excluir</button>`}).join('')}</table></div></div>`;
+return l('clientes','Clientes / fornecedores','Ex.: Terra Verde','<label>ID / código<input name="codigo" placeholder="Ex.: 10"></label>')+l('veic','Veículos','Ex.: 9160 ou 3/4 RD')+l('equipe','Colaboradores','Ex.: Gabriel')+`<p class="note">Excluir um cadastro não apaga os fretes já lançados.</p>`}
+function addCad(e,k){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));S[k].push(k=='clientes'?{id:nid(S.clientes),nome:d.nome,codigo:d.codigo||''}:d.nome);save();draw()}
+function delCad(k,i){if(confirm('Excluir cadastro?')){S[k].splice(i,1);save();draw()}}
+function gastos(){const G=S.gastos.filter(inM).sort((a,b)=>b.data.localeCompare(a.data));
+return `<div class="card"><h2>Lançar gasto</h2><form onsubmit="addG(event)"><label>Data<input name="data" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><label>Descrição<input name="desc" required></label><label>Tipo<select class="f" name="cat"><option>Diesel<option>Manutenção<option>Pedágio<option>NF / Imposto<option>Outros</select></label><label>Quem pagou<select class="f" name="quem">${S.equipe.map(v=>`<option>${esc(v)}`).join('')}</select></label><label>Valor (R$)<input name="valor" type="number" step="0.01" required inputmode="decimal"></label><button class="btn">Salvar gasto</button></form></div>`+mesBar()+`<div class="card"><h2>${R(sum(G,g=>g.valor))} em gastos</h2><div class="tw"><table><tr><th>Data<th>Descrição<th>Tipo<th>Quem<th class="r">Valor<th></tr>${G.map(g=>`<tr><td>${fd(g.data)}<td>${esc(g.desc)}<td>${esc(g.cat)}<td>${esc(g.quem)}<td class="r">${R(g.valor)}<td><button class="btn s" onclick="delG(${g.id})">Excluir</button>`).join('')}</table></div></div>`}
+const V={painel,fretes,cobranca,equipe,gastos,cadastros};
+function draw(){if(!tabs().some(t=>t[0]==tab))tab=tabs()[0][0];if(!mes)mes=meses()[0]||'';
+$('#nav').innerHTML=tabs().map(t=>`<button class="${t[0]==tab?'on':''}" onclick="tab='${t[0]}';draw()">${t[1]}</button>`).join('');
+$('#who').innerHTML=S.equipe.map(n=>`<option ${n==me?'selected':''}>${esc(n)}</option>`).join('');
+$('#app').innerHTML=V[tab]()}
+$('#who').onchange=e=>{me=e.target.value;fMot='';draw()};
+function addF(e){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));S.fretes.push({id:nid(S.fretes),...d,valor:+d.valor,pago:false,nf:'',venc:''});if(!S.clientes.some(c=>c.nome==d.cliente))S.clientes.push({id:nid(S.clientes),nome:d.cliente,codigo:''});save();mes=d.data.slice(0,7);draw()}
+function addG(e){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));S.gastos.push({id:nid(S.gastos),...d,valor:+d.valor});save();draw()}
+const delF=id=>{if(confirm('Excluir este frete?')){S.fretes=S.fretes.filter(f=>f.id!=id);save();draw()}};
+const delG=id=>{if(confirm('Excluir este gasto?')){S.gastos=S.gastos.filter(f=>f.id!=id);save();draw()}};
+const pg=id=>{const f=S.fretes.find(x=>x.id==id);f.pago=!f.pago;save();draw()};
+function nf(id){const f=S.fretes.find(x=>x.id==id),n=prompt('Número da NF:',f.nf);if(n===null)return;const v=prompt('Vencimento (AAAA-MM-DD):',f.venc);f.nf=n;if(v!==null)f.venc=v;save();draw()}
+draw();
+</script></body></html>

@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// RDCM Transportes e Guincho
+// - dono/admin: vê e altera tudo
+// - colaborador: vê só os próprios fretes, gastos e pagamentos; pode lançar frete e gasto em nome próprio
+// - pendente: só enxerga o próprio perfil até ser liberado
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return /databases/$(database)/documents/usuarios/$(request.auth.uid); }
+    function hasProfile() { return signedIn() && exists(userDoc()); }
+    function me() { return get(userDoc()).data; }
+    function isAdmin() { return hasProfile() && me().papel in ['dono', 'admin']; }
+    function isColab() { return hasProfile() && me().papel == 'colaborador' && me().colaboradorId is string; }
+    function isMember() { return isAdmin() || isColab(); }
+    function myColab() { return me().colaboradorId; }
+    function cfg() { return get(/databases/$(database)/documents/config/geral).data; }
+
+    match /config/{id} {
+      allow read: if signedIn();
+      // primeira conta criada no sistema vira o dono
+      allow create: if signedIn() && id == 'geral' && request.resource.data.donoUid == request.auth.uid;
+      allow update: if hasProfile() && me().papel == 'dono' && request.resource.data.donoUid == resource.data.donoUid;
+    }
+
+    match /usuarios/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid && (
+        (request.resource.data.papel == 'pendente' && request.resource.data.colaboradorId == null) ||
+        (request.resource.data.papel == 'dono' && cfg().donoUid == uid)
+      );
+      // o próprio usuário pode atualizar seu perfil, sem mudar o papel; o vínculo só o admin muda
+      allow update: if (signedIn() && request.auth.uid == uid
+                        && request.resource.data.papel == resource.data.papel
+                        && (request.resource.data.colaboradorId == resource.data.colaboradorId || isAdmin()))
+                    || (isAdmin() && resource.data.papel != 'dono' && request.resource.data.papel != 'dono'
+                        && (me().papel == 'dono' || (resource.data.papel != 'admin' && request.resource.data.papel != 'admin')));
+      allow delete: if isAdmin() && resource.data.papel != 'dono';
+    }
+
+    match /colaboradores/{id} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    match /veiculos/{id} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    match /clientes/{id} {
+      allow read: if isMember();
+      allow create: if isMember();
+      allow update, delete: if isAdmin();
+    }
+
+    match /fretes/{id} {
+      allow read: if isAdmin() || (isColab() && resource.data.motoristaId == myColab());
+      allow create: if isAdmin() || (isColab()
+        && request.resource.data.motoristaId == myColab()
+        && request.resource.data.pago == false);
+      allow update, delete: if isAdmin();
+    }
+
+    match /gastos/{id} {
+      allow read: if isAdmin() || (isColab() && resource.data.quemId == myColab());
+      allow create: if isAdmin() || (isColab() && request.resource.data.quemId == myColab());
+      allow update, delete: if isAdmin();
+    }
+
+    match /pagamentos/{id} {
+      allow read: if isAdmin() || (isColab() && resource.data.colaboradorId == myColab());
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "RDCM Transportes e Guincho",
+  "short_name": "RDCM",
+  "description": "Controle de fretes, cobrança, equipe e gastos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f3ef",
+  "theme_color": "#16181c",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
