@@ -3,5 +3,8 @@ dist
 .firebase
 *.tsbuildinfo
 *.local
+.env
+.env.local
+.env.*.local
 firebase-debug.log
 firestore-debug.log
